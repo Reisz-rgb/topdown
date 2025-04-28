@@ -70,8 +70,8 @@ int main(void)
     }
 
     Music bgm = { 0 };
-    if (FileExists("resources/background_music.mp3")) {
-        bgm = LoadMusicStream("resources/background_music.mp3");
+    if (FileExists("resources/background_music.wav")) {
+        bgm = LoadMusicStream("resources/background_music.wav");
         if (bgm.ctxData != NULL) {
             musicLoaded = true;
             SetMusicVolume(bgm, 0.7f);
