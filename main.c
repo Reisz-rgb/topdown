@@ -59,12 +59,10 @@ int main(void)
     bool shouldExit = false;
     bool musicLoaded = false;
 
-    // Modified font loading and unloading
-    Font font = GetFontDefault();  // Start with default font
+    Font font = GetFontDefault();
     if (FileExists("resources/RobotoCondensed-Bold.ttf")) {
-        // Only assign a new font if the file exists
         Font loadedFont = LoadFont("resources/RobotoCondensed-Bold.ttf");
-        if (loadedFont.texture.id > 0) { // Check if successfully loaded
+        if (loadedFont.texture.id > 0) {
             font = loadedFont;
         }
     }
@@ -127,34 +125,39 @@ int main(void)
     float menuBlinkTimer = 0.0f;
 
     ParallaxLayer layers[MAX_LAYERS];
+    // Replace the texture loading code with:
     for (int i = 0; i < MAX_LAYERS; i++) {
         char filename[100];
         sprintf(filename, "resources/layer_%d.png", i + 1);
-        layers[i].texture = LoadTexture(filename);
-
+        
+        if (FileExists(filename)) {
+            layers[i].texture = LoadTexture(filename);
+        }
+        
+        // Generate placeholder if loading failed or file doesn't exist
         if (layers[i].texture.id == 0) {
             Image placeholder = GenImageColor(SCREEN_WIDTH, SCREEN_HEIGHT,
                 ColorAlpha((Color){ rand() % 200 + 55, rand() % 200 + 55, rand() % 200 + 55, 255 },
                 (float)(MAX_LAYERS - i) / MAX_LAYERS));
-            layers[i].texture = LoadTextureFromImage(placeholder);
-            UnloadImage(placeholder);
+            
+            if (placeholder.data != NULL) {
+                layers[i].texture = LoadTextureFromImage(placeholder);
+                UnloadImage(placeholder);
+            }
+            
+            if (layers[i].texture.id == 0) {
+                TraceLog(LOG_ERROR, "Failed to load texture for layer %d", i);
+                // Continue anyway with remaining layers
+            }
         }
-
-        if (layers[i].texture.id == 0) {
-            TraceLog(LOG_ERROR, "Failed to load texture for layer %d", i);
-            CloseWindow();
-            return 1;
-        }
-
+        
         layers[i].position = (Vector2){ 0, 0 };
         layers[i].scrollSpeed = 0.1f * (MAX_LAYERS - i);
     }
-
     while (!shouldExit && !WindowShouldClose())
     {
-        if (bgm.ctxData != NULL) {
-            StopMusicStream(bgm);  // Add this to ensure music is stopped before unloading
-            UnloadMusicStream(bgm);
+        if (musicLoaded) {
+            UpdateMusicStream(bgm);
         }
 
         menuBlinkTimer += GetFrameTime();
@@ -215,7 +218,7 @@ int main(void)
                 break;
 
             case OPTIONS_MENU:
-                if (IsKeyPressed(KEY_ESCAPE) || IsKeyPressed(KEY_ENTER)) {
+                if (IsKeyPressed(KEY_Z) || IsKeyPressed(KEY_ENTER)) {
                     if (selectSfx.stream.buffer && selectSfx.frameCount > 0) {
                         PlaySound(selectSfx);
                     }
@@ -224,7 +227,7 @@ int main(void)
                 break;
 
             case GAME_SCREEN:
-                if (IsKeyPressed(KEY_ESCAPE)) {
+                if (IsKeyPressed(KEY_Z)) {
                     if (selectSfx.stream.buffer && selectSfx.frameCount > 0) {
                         PlaySound(selectSfx);
                     }
@@ -264,15 +267,15 @@ int main(void)
                 case OPTIONS_MENU:
                     DrawTextEx(font, "OPTIONS", (Vector2){ SCREEN_WIDTH/2 - MeasureTextEx(font, "OPTIONS", 30, 2).x/2 + 2, 40 + 2 }, 30, 2, BLACK);
                     DrawTextEx(font, "OPTIONS", (Vector2){ SCREEN_WIDTH/2 - MeasureTextEx(font, "OPTIONS", 30, 2).x/2, 40 }, 30, 2, WHITE);
-                    DrawTextEx(font, "Press ENTER or ESC to return", (Vector2){ SCREEN_WIDTH/2 - MeasureTextEx(font, "Press ENTER or ESC to return", 20, 2).x/2 + 2, SCREEN_HEIGHT - 100 + 2 }, 20, 2, BLACK);
-                    DrawTextEx(font, "Press ENTER or ESC to return", (Vector2){ SCREEN_WIDTH/2 - MeasureTextEx(font, "Press ENTER or ESC to return", 20, 2).x/2, SCREEN_HEIGHT - 100 }, 20, 2, WHITE);
+                    DrawTextEx(font, "Press ENTER or Z to return", (Vector2){ SCREEN_WIDTH/2 - MeasureTextEx(font, "Press ENTER or Z to return", 20, 2).x/2 + 2, SCREEN_HEIGHT - 100 + 2 }, 20, 2, BLACK);
+                    DrawTextEx(font, "Press ENTER or Z to return", (Vector2){ SCREEN_WIDTH/2 - MeasureTextEx(font, "Press ENTER or Z to return", 20, 2).x/2, SCREEN_HEIGHT - 100 }, 20, 2, WHITE);
                     break;
 
                 case GAME_SCREEN:
                     DrawTextEx(font, "GAME SCREEN", (Vector2){ SCREEN_WIDTH/2 - MeasureTextEx(font, "GAME SCREEN", 30, 2).x/2 + 2, 40 + 2 }, 30, 2, BLACK);
                     DrawTextEx(font, "GAME SCREEN", (Vector2){ SCREEN_WIDTH/2 - MeasureTextEx(font, "GAME SCREEN", 30, 2).x/2, 40 }, 30, 2, WHITE);
-                    DrawTextEx(font, "Press ESC to return to menu", (Vector2){ SCREEN_WIDTH/2 - MeasureTextEx(font, "Press ESC to return to menu", 20, 2).x/2 + 2, SCREEN_HEIGHT - 100 + 2 }, 20, 2, BLACK);
-                    DrawTextEx(font, "Press ESC to return to menu", (Vector2){ SCREEN_WIDTH/2 - MeasureTextEx(font, "Press ESC to return to menu", 20, 2).x/2, SCREEN_HEIGHT - 100 }, 20, 2, WHITE);
+                    DrawTextEx(font, "Press Z to return to menu", (Vector2){ SCREEN_WIDTH/2 - MeasureTextEx(font, "Press Z to return to menu", 20, 2).x/2 + 2, SCREEN_HEIGHT - 100 + 2 }, 20, 2, BLACK);
+                    DrawTextEx(font, "Press Z to return to menu", (Vector2){ SCREEN_WIDTH/2 - MeasureTextEx(font, "Press Z to return to menu", 20, 2).x/2, SCREEN_HEIGHT - 100 }, 20, 2, WHITE);
                     break;
             }
 
@@ -291,24 +294,23 @@ int main(void)
     TraceLog(LOG_DEBUG, "Font texture ID: %d, Default font texture ID: %d", 
          font.texture.id, GetFontDefault().texture.id);
 
+    // At the end of your program, before CloseWindow:
+    // Unload textures
+    for (int i = 0; i < MAX_LAYERS; i++) {
+        if (layers[i].texture.id > 0) UnloadTexture(layers[i].texture);
+    }
+
+    // Unload font only if it's not the default font
     if (font.texture.id > 0 && font.texture.id != GetFontDefault().texture.id) {
         UnloadFont(font);
     }
 
-    if (bgm.ctxData != NULL) {
-        UnloadMusicStream(bgm);
-    }
-
-    if (selectSfx.stream.buffer && selectSfx.frameCount > 0) {
-        UnloadSound(selectSfx);
-    }
-
-    if (confirmSfx.stream.buffer && confirmSfx.frameCount > 0) {
-        UnloadSound(confirmSfx);
-    }
+    // Unload audio resources
+    if (musicLoaded) UnloadMusicStream(bgm);
+    UnloadSound(selectSfx);
+    UnloadSound(confirmSfx);
 
     CloseAudioDevice();
     CloseWindow();
-
     return 0;
 }
