@@ -125,7 +125,6 @@ int main(void)
     float menuBlinkTimer = 0.0f;
 
     ParallaxLayer layers[MAX_LAYERS];
-    // Replace the texture loading code with:
     for (int i = 0; i < MAX_LAYERS; i++) {
         char filename[100];
         sprintf(filename, "resources/layer_%d.png", i + 1);
@@ -218,7 +217,7 @@ int main(void)
                 break;
 
             case OPTIONS_MENU:
-                if (IsKeyPressed(KEY_Z) || IsKeyPressed(KEY_ENTER)) {
+                if (IsKeyPressed(KEY_Z)) {
                     if (selectSfx.stream.buffer && selectSfx.frameCount > 0) {
                         PlaySound(selectSfx);
                     }
@@ -267,8 +266,8 @@ int main(void)
                 case OPTIONS_MENU:
                     DrawTextEx(font, "OPTIONS", (Vector2){ SCREEN_WIDTH/2 - MeasureTextEx(font, "OPTIONS", 30, 2).x/2 + 2, 40 + 2 }, 30, 2, BLACK);
                     DrawTextEx(font, "OPTIONS", (Vector2){ SCREEN_WIDTH/2 - MeasureTextEx(font, "OPTIONS", 30, 2).x/2, 40 }, 30, 2, WHITE);
-                    DrawTextEx(font, "Press ENTER or Z to return", (Vector2){ SCREEN_WIDTH/2 - MeasureTextEx(font, "Press ENTER or Z to return", 20, 2).x/2 + 2, SCREEN_HEIGHT - 100 + 2 }, 20, 2, BLACK);
-                    DrawTextEx(font, "Press ENTER or Z to return", (Vector2){ SCREEN_WIDTH/2 - MeasureTextEx(font, "Press ENTER or Z to return", 20, 2).x/2, SCREEN_HEIGHT - 100 }, 20, 2, WHITE);
+                    DrawTextEx(font, "Press Z to return", (Vector2){ SCREEN_WIDTH/2 - MeasureTextEx(font, "Press Z to return", 20, 2).x/2 + 2, SCREEN_HEIGHT - 100 + 2 }, 20, 2, BLACK);
+                    DrawTextEx(font, "Press Z to return", (Vector2){ SCREEN_WIDTH/2 - MeasureTextEx(font, "Press Z to return", 20, 2).x/2, SCREEN_HEIGHT - 100 }, 20, 2, WHITE);
                     break;
 
                 case GAME_SCREEN:
@@ -294,8 +293,6 @@ int main(void)
     TraceLog(LOG_DEBUG, "Font texture ID: %d, Default font texture ID: %d", 
          font.texture.id, GetFontDefault().texture.id);
 
-    // At the end of your program, before CloseWindow:
-    // Unload textures
     for (int i = 0; i < MAX_LAYERS; i++) {
         if (layers[i].texture.id > 0) UnloadTexture(layers[i].texture);
     }
