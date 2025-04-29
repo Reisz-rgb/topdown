@@ -68,11 +68,11 @@ int main(void)
     }
 
     Music bgm = { 0 };
-    if (FileExists("resources/background_music.wav")) {
-        bgm = LoadMusicStream("resources/background_music.wav");
+    if (FileExists("resources/Sound/background_music.ogg")) {
+        bgm = LoadMusicStream("resources/Sound/background_music.ogg");
         if (bgm.ctxData != NULL) {
             musicLoaded = true;
-            SetMusicVolume(bgm, 0.7f);
+            SetMusicVolume(bgm, 4.7f);
             PlayMusicStream(bgm);
         }
     }
@@ -81,11 +81,11 @@ int main(void)
     Sound confirmSfx = { 0 };
 
     if (FileExists("resources/select.wav")) {
-        selectSfx = LoadSound("resources/select.wav");
+        selectSfx = LoadSound("resources/Sound/select.ogg");
     }
 
     if (FileExists("resources/confirm.wav")) {
-        confirmSfx = LoadSound("resources/confirm.wav");
+        confirmSfx = LoadSound("resources/Sound/confirm.ogg");
     }
 
     const char* title = "PARALLAX BACKGROUND";
