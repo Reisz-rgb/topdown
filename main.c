@@ -18,6 +18,7 @@ typedef struct {
     Texture2D texture;
     Vector2 position;
     float scrollSpeed;
+    bool active;  // Flag to track if this layer is valid
 } ParallaxLayer;
 
 typedef struct {
@@ -28,8 +29,11 @@ typedef struct {
 
 void DrawParallaxBackground(ParallaxLayer *layers, int count) {
     for (int i = count - 1; i >= 0; i--) {
-        DrawTexture(layers[i].texture, layers[i].position.x, layers[i].position.y, WHITE);
-        DrawTexture(layers[i].texture, layers[i].position.x + layers[i].texture.width, layers[i].position.y, WHITE);
+        // Only draw active layers with valid textures
+        if (layers[i].active && layers[i].texture.id > 0) {
+            DrawTexture(layers[i].texture, layers[i].position.x, layers[i].position.y, WHITE);
+            DrawTexture(layers[i].texture, layers[i].position.x + layers[i].texture.width, layers[i].position.y, WHITE);
+        }
     }
 }
 
@@ -38,18 +42,23 @@ void UpdateParallaxLayers(ParallaxLayer *layers, int count, float scrollingSpeed
     scrollingPosition += scrollingSpeed;
     
     for (int i = 0; i < count; i++) {
-        layers[i].position.x = -scrollingPosition * layers[i].scrollSpeed;
-        while (layers[i].position.x <= -layers[i].texture.width) {
-            layers[i].position.x += layers[i].texture.width;
+        // Only update active layers with valid textures
+        if (layers[i].active && layers[i].texture.id > 0 && layers[i].texture.width > 0) {
+            layers[i].position.x = -scrollingPosition * layers[i].scrollSpeed;
+            
+            // Safely wrap around the position
+            while (layers[i].position.x <= -layers[i].texture.width) {
+                layers[i].position.x += layers[i].texture.width;
+            }
         }
     }
 }
 
 int main(void)
 {
-    SetTraceLogLevel(LOG_ALL);  // Enable all logs
+    SetTraceLogLevel(LOG_ALL);  
 
-    InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Parallax Background Demo");
+    InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "TopDown RPG");
     InitAudioDevice();
     SetTargetFPS(60);
 
@@ -72,7 +81,7 @@ int main(void)
         bgm = LoadMusicStream("resources/Sound/background_music.ogg");
         if (bgm.ctxData != NULL) {
             musicLoaded = true;
-            SetMusicVolume(bgm, 4.7f);
+            SetMusicVolume(bgm, 1.5f);  
             PlayMusicStream(bgm);
         }
     }
@@ -80,11 +89,12 @@ int main(void)
     Sound selectSfx = { 0 };
     Sound confirmSfx = { 0 };
 
-    if (FileExists("resources/select.wav")) {
+    
+    if (FileExists("resources/Sound/select.ogg")) {
         selectSfx = LoadSound("resources/Sound/select.ogg");
     }
 
-    if (FileExists("resources/confirm.wav")) {
+    if (FileExists("resources/Sound/confirm.ogg")) {
         confirmSfx = LoadSound("resources/Sound/confirm.ogg");
     }
 
@@ -124,37 +134,83 @@ int main(void)
     int selectedMenuItem = 0;
     float menuBlinkTimer = 0.0f;
 
-    ParallaxLayer layers[MAX_LAYERS];
+    // Initialize all layers to inactive
+    ParallaxLayer layers[MAX_LAYERS] = { 0 };
+    int validLayers = 0;
+    
+    // Load background layers
     for (int i = 0; i < MAX_LAYERS; i++) {
         char filename[100];
-        sprintf(filename, "resources/layer_%d.png", i + 1);
+        sprintf(filename, "resources/Image/Background/layer_%d.png", i + 1);
         
+        layers[i].active = false;  // Default to inactive
+        
+        // Try to load the texture
         if (FileExists(filename)) {
             layers[i].texture = LoadTexture(filename);
+            
+            // Verify the texture loaded correctly
+            if (layers[i].texture.id > 0 && layers[i].texture.width > 0) {
+                layers[i].active = true;
+                layers[i].position = (Vector2){ 0, 0 };
+                layers[i].scrollSpeed = 0.1f * (i + 1);  // Foreground moves faster
+                validLayers++;
+                TraceLog(LOG_INFO, "Loaded texture for layer %d: %s", i, filename);
+            } else {
+                TraceLog(LOG_WARNING, "Failed to load texture: %s", filename);
+            }
+        } else {
+            TraceLog(LOG_INFO, "Layer file does not exist: %s", filename);
         }
         
-        // Generate placeholder if loading failed or file doesn't exist
-        if (layers[i].texture.id == 0) {
+        // If loading failed, create a placeholder texture
+        if (!layers[i].active) {
             Image placeholder = GenImageColor(SCREEN_WIDTH, SCREEN_HEIGHT,
                 ColorAlpha((Color){ rand() % 200 + 55, rand() % 200 + 55, rand() % 200 + 55, 255 },
-                (float)(MAX_LAYERS - i) / MAX_LAYERS));
+                (float)(i + 1) / MAX_LAYERS));
             
             if (placeholder.data != NULL) {
                 layers[i].texture = LoadTextureFromImage(placeholder);
                 UnloadImage(placeholder);
-            }
-            
-            if (layers[i].texture.id == 0) {
-                TraceLog(LOG_ERROR, "Failed to load texture for layer %d", i);
-                // Continue anyway with remaining layers
+                
+                if (layers[i].texture.id > 0 && layers[i].texture.width > 0) {
+                    layers[i].active = true;
+                    layers[i].position = (Vector2){ 0, 0 };
+                    layers[i].scrollSpeed = 0.1f * (i + 1);
+                    validLayers++;
+                    TraceLog(LOG_INFO, "Created placeholder texture for layer %d", i);
+                } else {
+                    TraceLog(LOG_ERROR, "Failed to create placeholder texture for layer %d", i);
+                }
+            } else {
+                TraceLog(LOG_ERROR, "Failed to generate placeholder image for layer %d", i);
             }
         }
-        
-        layers[i].position = (Vector2){ 0, 0 };
-        layers[i].scrollSpeed = 0.1f * (MAX_LAYERS - i);
     }
+    
+    // If no valid layers were loaded, create at least one default layer to avoid crashes
+    if (validLayers == 0) {
+        TraceLog(LOG_WARNING, "No valid layers loaded, creating default layer");
+        Image defaultImage = GenImageColor(SCREEN_WIDTH, SCREEN_HEIGHT, DARKBLUE);
+        if (defaultImage.data != NULL) {
+            layers[0].texture = LoadTextureFromImage(defaultImage);
+            UnloadImage(defaultImage);
+            
+            if (layers[0].texture.id > 0) {
+                layers[0].active = true;
+                layers[0].position = (Vector2){ 0, 0 };
+                layers[0].scrollSpeed = 0.1f;
+                validLayers = 1;
+            }
+        }
+    }
+    
+    TraceLog(LOG_INFO, "Loaded %d valid parallax layers", validLayers);
+    
+    // Main game loop
     while (!shouldExit && !WindowShouldClose())
     {
+        // Update music if loaded
         if (musicLoaded) {
             UpdateMusicStream(bgm);
         }
@@ -170,8 +226,11 @@ int main(void)
             }
         }
 
-        float scrollSpeed = (currentState == TITLE_SCREEN) ? 0.5f : 1.0f;
-        UpdateParallaxLayers(layers, MAX_LAYERS, scrollSpeed);
+        // Only update parallax if we have valid layers
+        if (validLayers > 0) {
+            float scrollSpeed = (currentState == TITLE_SCREEN) ? 0.5f : 1.0f;
+            UpdateParallaxLayers(layers, MAX_LAYERS, scrollSpeed);
+        }
 
         switch (currentState) {
             case TITLE_SCREEN:
@@ -237,7 +296,11 @@ int main(void)
 
         BeginDrawing();
             ClearBackground(BLACK);
-            DrawParallaxBackground(layers, MAX_LAYERS);
+            
+            // Only draw parallax if we have valid layers
+            if (validLayers > 0) {
+                DrawParallaxBackground(layers, MAX_LAYERS);
+            }
 
             switch (currentState) {
                 case TITLE_SCREEN:
@@ -285,16 +348,15 @@ int main(void)
         EndDrawing();
     }
 
-    for (int i = 0; i < MAX_LAYERS; i++) {
-        if (layers[i].texture.id > 0) UnloadTexture(layers[i].texture);
-    }
-
+    // Clean up resources - only do this once
     TraceLog(LOG_DEBUG, "Unloading resources...");
-    TraceLog(LOG_DEBUG, "Font texture ID: %d, Default font texture ID: %d", 
-         font.texture.id, GetFontDefault().texture.id);
-
+    
+    // Unload all active layer textures
     for (int i = 0; i < MAX_LAYERS; i++) {
-        if (layers[i].texture.id > 0) UnloadTexture(layers[i].texture);
+        if (layers[i].active && layers[i].texture.id > 0) {
+            UnloadTexture(layers[i].texture);
+            layers[i].active = false;
+        }
     }
 
     // Unload font only if it's not the default font
@@ -304,8 +366,8 @@ int main(void)
 
     // Unload audio resources
     if (musicLoaded) UnloadMusicStream(bgm);
-    UnloadSound(selectSfx);
-    UnloadSound(confirmSfx);
+    if (selectSfx.frameCount > 0) UnloadSound(selectSfx);
+    if (confirmSfx.frameCount > 0) UnloadSound(confirmSfx);
 
     CloseAudioDevice();
     CloseWindow();
