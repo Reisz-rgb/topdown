@@ -3,7 +3,7 @@
 #include <string.h>
 #include <stdio.h>
 
-#define MAX_LAYERS 8
+#define MAX_LAYERS 4
 #define SCREEN_WIDTH 800
 #define SCREEN_HEIGHT 600
 
@@ -81,7 +81,7 @@ int main(void)
         bgm = LoadMusicStream("resources/Sound/background_music.ogg");
         if (bgm.ctxData != NULL) {
             musicLoaded = true;
-            SetMusicVolume(bgm, 1.5f);  
+            SetMusicVolume(bgm, 2.0f);  
             PlayMusicStream(bgm);
         }
     }
