@@ -15,7 +15,7 @@ RAYLIB_LIB = $(RAYLIB_PATH)/src
 TARGET = game
 
 # Source files (change this to match your project)
-SOURCES = main.c
+SOURCES = main.c resources.c title_screen.c main_menu.c options_menu.c game_screen.c
 
 # Object files
 OBJECTS = $(SOURCES:.c=.o)
