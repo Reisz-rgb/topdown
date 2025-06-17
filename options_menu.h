@@ -2,10 +2,14 @@
 #define OPTIONS_MENU_H
 
 #include "raylib.h"
+#include "resources.h"
 
 typedef struct {
-    // Add any options-specific state here
-    // For example: volume levels, control settings, etc.
+    float musicVolume;
+    float sfxVolume;
+    int windowMode; // 0 = original, 1 = maximized, 2 = fullscreen
+    int selectedOption;
+    bool settingsChanged;
 } OptionsMenuState;
 
 void InitOptionsMenu(OptionsMenuState* state);

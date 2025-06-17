@@ -1,6 +1,7 @@
 #include "resources.h"
 #include <stdlib.h>
 #include <stdio.h>
+#include <math.h>
 
 Font gameFont = { 0 };
 Music bgm = { 0 };
@@ -108,17 +109,20 @@ void UnloadResources() {
 }
 
 void UpdateParallaxLayers(float scrollingSpeed) {
-    static float scrollingPosition = 0.0f;
+    static double scrollingPosition = 0.0;
     scrollingPosition += scrollingSpeed;
     
     for (int i = 0; i < MAX_LAYERS; i++) {
-        if (layers[i].active && layers[i].texture.id > 0 && layers[i].texture.width > 0) {
-            layers[i].position.x = -scrollingPosition * layers[i].scrollSpeed;
+        if (layers[i].active && layers[i].texture.id > 0) {
+            float width = (float)layers[i].texture.width;
             
-             // Wrap around when texture moves completely off-screen
-            if (layers[i].position.x <= -layers[i].texture.width) {
-                layers[i].position.x += layers[i].texture.width;
-            }
+            // Smoother speed distribution
+            float layerSpeed = 0.4f + (0.25f * i);
+            layers[i].position.x = -(float)(scrollingPosition * layerSpeed);
+            
+            // Improved wrapping
+            layers[i].position.x = fmodf(layers[i].position.x, width);
+            if (layers[i].position.x > 0) layers[i].position.x -= width;
         }
     }
 }
@@ -126,8 +130,15 @@ void UpdateParallaxLayers(float scrollingSpeed) {
 void DrawParallaxBackground() {
     for (int i = MAX_LAYERS - 1; i >= 0; i--) {
         if (layers[i].active && layers[i].texture.id > 0) {
-            DrawTexture(layers[i].texture, layers[i].position.x, layers[i].position.y, WHITE);
-            DrawTexture(layers[i].texture, layers[i].position.x + layers[i].texture.width, layers[i].position.y, WHITE);
+            float width = (float)layers[i].texture.width;
+            
+            // Draw enough copies to cover any position
+            for (int j = -1; j <= 1; j++) {
+                DrawTexture(layers[i].texture, 
+                          layers[i].position.x + (j * width), 
+                          layers[i].position.y, 
+                          WHITE);
+            }
         }
     }
 }
