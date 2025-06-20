@@ -2,14 +2,18 @@
 #define OPTIONS_MENU_H
 
 #include "raylib.h"
-#include "resources.h"
+
+typedef enum {
+    WINDOW_ORIGINAL,
+    WINDOW_MAXIMIZED,
+    WINDOW_FULLSCREEN
+} WindowMode;
 
 typedef struct {
-    float musicVolume;
-    float sfxVolume;
-    int windowMode; // 0 = original, 1 = maximized, 2 = fullscreen
-    int selectedOption;
-    bool settingsChanged;
+    float musicVolume;      // 0.0f - 1.0f
+    float sfxVolume;        // 0.0f - 1.0f
+    WindowMode windowMode;  // Track current window mode
+    int selectedOption;     // 0 = music, 1 = sfx, 2 = window size
 } OptionsMenuState;
 
 void InitOptionsMenu(OptionsMenuState* state);
